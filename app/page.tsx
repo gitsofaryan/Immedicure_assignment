@@ -11,7 +11,7 @@ export default function Home() {
           <div className="flex items-center cursor-pointer">
             {/* <Image src="/logo" alt="Logo" width={24} height={24} /> */}
             <p className="text-LightGray font-semibold text-xl tracking-wide">
-              Immedi<span className="text-secondary text-yellow-500">&apos;Cure</span>
+              Immedi<span className="text-secondary text-yellow-500">Cure</span>
             </p>
           </div>
           <div className="hidden md:flex lg:flex gap-5 lg:gap-8 text-LightGray text-sm md:text-[16px] font-medium tracking-wide">
