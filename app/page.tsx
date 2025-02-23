@@ -24,7 +24,7 @@ export default function Home() {
         </div>
       </div>
       <h1 className="text-4xl font-bold mb-8 md:text-6xl md:w-full text-center text-blue-950">
-        ImmediCure</span>
+        ImmediCure
       </h1>
       <p className="text-bold mb-4 md:text-xl text-center">
         Get instant doctor recommendations based on your symptoms and location.
