@@ -73,7 +73,7 @@ export function RecommendationForm() {
         <CardHeader>
           <CardTitle className="text-3xl font-bold">Doctor Recommendation System</CardTitle>
           <CardDescription className="mt-2 text-lg text-yellow-500">
-            Tell us your symptoms and location, and we'll recommend the best doctors near you.
+            Tell us your symptoms and location, and we&apos;ll recommend the best doctors near you.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>

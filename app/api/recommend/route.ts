@@ -114,7 +114,16 @@ export async function POST(request: Request) {
       if (!Array.isArray(doctorData)) {
         throw new Error("Response is not a JSON array as expected.");
       }
-    } catch (parseError) {
+    } catch (error) {
+      let parseError: Error;
+
+      // Check if the error is an instance of Error
+      if (error instanceof Error) {
+        parseError = error;
+      } else {
+        parseError = new Error("An unknown error occurred");
+      }
+
       console.error("Error parsing JSON from Gemini:", parseError);
       console.error("Raw Gemini response text causing parse error:", text);
       return NextResponse.json(
@@ -157,7 +166,7 @@ export async function POST(request: Request) {
       let iframeTestMessage = "Initial iframe validation pending";
       let markerDetected = false;
       let streetViewDetected = false;
-      let iframeCode = doctor.map_iframe;
+      const iframeCode = doctor.map_iframe;
       let cleanedIframeCode = iframeCode;
 
       console.log(`\nDoctor ${index}: Initial iframeCode:\n`, iframeCode);
@@ -268,14 +277,23 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Error during Gemini API call:", error);
+    let errorMessage = "An error occurred while processing your request and communicating with the AI service.";
+    let errorStack = "";
+
+    // Check if the error is an instance of Error
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      errorStack = error.stack || "";
+    }
+
     return NextResponse.json(
       {
         status: "error",
-        message: "An error occurred while processing your request and communicating with the AI service.",
+        message: errorMessage,
         recommendation: null,
         debug: {
-          error_details: error.message,
-          error_stack: error.stack,
+          error_details: errorMessage,
+          error_stack: errorStack,
         },
         user_feedback: {
           disclaimer: "There was a problem processing your request. Please try again later.",
