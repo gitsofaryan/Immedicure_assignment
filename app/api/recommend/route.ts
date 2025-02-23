@@ -6,32 +6,32 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function POST(request: Request) {
-  // Extract data from the request
-  const { symptoms, userLocation } = await request.json();
-
-  if (!symptoms || !userLocation) {
-    return NextResponse.json(
-      {
-        status: "error",
-        message: "Missing symptoms or user location in the request.",
-        recommendation: null,
-        debug: {},
-        user_feedback: {
-          disclaimer:
-            "Please provide both symptoms and your location for doctor recommendations.",
-          next_steps:
-            "Ensure your request includes 'symptoms' and 'userLocation' fields.",
-        },
-      },
-      { status: 400 }
-    );
-  }
-
   try {
+    // Extract data from the request
+    const { symptoms, userLocation } = await request.json();
+
+    if (!symptoms || !userLocation) {
+      return NextResponse.json(
+        {
+          status: "error",
+          message: "Missing symptoms or user location in the request.",
+          recommendation: null,
+          debug: {},
+          user_feedback: {
+            disclaimer:
+              "Please provide both symptoms and your location for doctor recommendations.",
+            next_steps:
+              "Ensure your request includes 'symptoms' and 'userLocation' fields.",
+          },
+        },
+        { status: 400 }
+      );
+    }
+
     // Get your model instance
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-    // Build the prompt with explicit instructions to return ONLY a valid JSON array (no markdown)
+    // Build the prompt with explicit instructions
     const prompt = `
       You are a healthcare professional recommendation system specializing in India.
       The user is located near: ${userLocation}.
@@ -86,18 +86,17 @@ export async function POST(request: Request) {
           "website": "http://www.vikramsinghpediatrics.com",
           "map_iframe": "<iframe src='https://www.google.com/maps/embed?...'></iframe>",
           "additional_notes": "Expert in childhood vaccinations and nutrition."
-        },
+        }
       ]
     `;
 
-    // Call Gemini
+    // Call Gemini API
     const result = await model.generateContent(prompt);
     const geminiResponse = await result.response;
     let text = geminiResponse.text();
-
     console.log("Gemini Raw Response Text:", text);
 
-    // Robust removal of code block markers (if any)
+    // Remove potential code block markers (```) or backticks
     const codeBlockRegex = /^\s*`{3}(?:json)?\s*([\s\S]*?)`{3}\s*$/i;
     const match = text.match(codeBlockRegex);
     if (match) {
@@ -108,6 +107,16 @@ export async function POST(request: Request) {
       console.log("Removed single backticks (fallback regex fix).");
     }
 
+    // Fallback: if the text doesn't start with a JSON array, try extracting it with regex
+    if (!text.trim().startsWith("[")) {
+      const arrayMatch = text.match(/(\[[\s\S]*\])/);
+      if (arrayMatch) {
+        text = arrayMatch[1].trim();
+        console.log("Extracted JSON array using fallback regex.");
+      }
+    }
+
+    // Parse the JSON response
     let doctorData;
     try {
       doctorData = JSON.parse(text);
@@ -115,15 +124,7 @@ export async function POST(request: Request) {
         throw new Error("Response is not a JSON array as expected.");
       }
     } catch (error) {
-      let parseError: Error;
-
-      // Check if the error is an instance of Error
-      if (error instanceof Error) {
-        parseError = error;
-      } else {
-        parseError = new Error("An unknown error occurred");
-      }
-
+      const parseError: Error = error instanceof Error ? error : new Error("An unknown error occurred");
       console.error("Error parsing JSON from Gemini:", parseError);
       console.error("Raw Gemini response text causing parse error:", text);
       return NextResponse.json(
@@ -147,7 +148,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Enhanced validation: Validate each doctor object and clean up the iframe code
+    // Enhanced validation: Validate each doctor object and clean up the iFrame code
     const validationResults = doctorData.map((doctor, index) => {
       const expectedKeys = [
         "name",
@@ -182,6 +183,7 @@ export async function POST(request: Request) {
           console.log(`Doctor ${index}: After trailing quote removal:\n`, cleanedIframeCode);
         }
 
+        // Append missing closing tag if necessary
         if (!cleanedIframeCode.endsWith("</iframe>")) {
           cleanedIframeCode += "</iframe>";
           console.warn(`Doctor ${index}: Appended missing </iframe> tag.`);
@@ -189,22 +191,20 @@ export async function POST(request: Request) {
         }
         doctor.map_iframe = cleanedIframeCode;
 
+        // Validate the iFrame structure and parameters
         if (cleanedIframeCode.startsWith("<iframe src='https://www.google.com/maps/embed")) {
           iframeValid = true;
           iframeTestMessage = "Basic iframe structure detected (after cleanup).";
-          if (cleanedIframeCode.includes("&markers=")) {
+          if (cleanedIframeCode.includes("&markers=") || cleanedIframeCode.includes("&q=")) {
             markerDetected = true;
             iframeTestMessage += " - Marker parameters detected.";
-          } else if (cleanedIframeCode.includes("&q=")) {
-            markerDetected = true;
-            iframeTestMessage += " - Query parameter ('q=') detected.";
           } else {
             markerDetected = false;
             iframeTestMessage += " - No marker parameters found.";
           }
           if (cleanedIframeCode.includes("layer=streetview") || cleanedIframeCode.includes("cbll=")) {
             streetViewDetected = true;
-            iframeTestMessage += " - **Street View parameters detected!**";
+            iframeTestMessage += " - Street View parameters detected!";
           } else {
             streetViewDetected = false;
             iframeTestMessage += " - No Street View parameters detected.";
@@ -280,7 +280,6 @@ export async function POST(request: Request) {
     let errorMessage = "An error occurred while processing your request and communicating with the AI service.";
     let errorStack = "";
 
-    // Check if the error is an instance of Error
     if (error instanceof Error) {
       errorMessage = error.message;
       errorStack = error.stack || "";
