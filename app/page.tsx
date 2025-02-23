@@ -11,7 +11,7 @@ export default function Home() {
           <div className="flex items-center cursor-pointer">
             {/* <Image src="/logo" alt="Logo" width={24} height={24} /> */}
             <p className="text-LightGray font-semibold text-xl tracking-wide">
-              Immedi<span className="text-secondary text-yellow-500">&apos;Cure</span>
+              Immedi<span className="text-secondary text-yellow-500">Cure</span>
             </p>
           </div>
           <div className="hidden md:flex lg:flex gap-5 lg:gap-8 text-LightGray text-sm md:text-[16px] font-medium tracking-wide">
@@ -24,7 +24,7 @@ export default function Home() {
         </div>
       </div>
       <h1 className="text-4xl font-bold mb-8 md:text-6xl md:w-full text-center text-blue-950">
-        Immedi<span className="text-secondary text-yellow-500">&apos;Cure</span>
+        ImmediCure</span>
       </h1>
       <p className="text-bold mb-4 md:text-xl text-center">
         Get instant doctor recommendations based on your symptoms and location.
