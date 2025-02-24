@@ -16,59 +16,53 @@ export async function POST(request: Request) {
 
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-    // Modified prompt to ensure JSON array response
     const prompt = `
-      Act as a healthcare recommendation system for India. Based on the location: ${userLocation} 
-      and symptoms: ${symptoms}, generate exactly 3 doctor recommendations.
-
-      You must respond with ONLY a JSON array containing exactly 3 doctor recommendations.
-      Do not include any explanatory text or markdown formatting.
-      The response must start with '[' and end with ']'.
+      Provide exactly 3 doctor recommendations for a patient in ${userLocation} with symptoms: ${symptoms}.
       
-      Each doctor object must follow this exact format:
+      Return ONLY a raw JSON array with exactly 3 doctor objects. No text before or after.
+      DO NOT include any markdown, code blocks, or explanatory text.
+      
+      Required JSON format for each doctor:
       {
-        "name": "Full name with title (e.g., Dr. Rajesh Kumar)",
+        "name": "Dr. Full Name",
         "specialty": "Medical specialty",
-        "address": "Complete address in ${userLocation}",
-        "phone": "Contact number with +91 prefix",
+        "address": "Full address in ${userLocation}",
+        "phone": "+91-XXXXXXXXXX",
         "rating": 4.5,
         "opening_hours": "Mon-Sat: 9:00 AM - 6:00 PM",
-        "website": "http://example.com or null",
+        "website": "http://example.com",
         "map_url": "https://goo.gl/maps/example",
         "notes": "Brief additional information"
       }
-
-      Ensure the response is a valid JSON array containing exactly 3 such objects.
+      
+      The response must be parseable JSON starting with [ and ending with ].
     `;
 
     const result = await model.generateContent(prompt);
     let response = result.response.text();
     
-    // Clean the response to ensure valid JSON
-    response = response.trim();
+    // More aggressive cleaning of the response
+    response = response.trim()
+      .replace(/```json\n?|\n?```/g, '')  // Remove code blocks
+      .replace(/^(?![\[\{]).*$/gm, '')    // Remove any lines not starting with [ or {
+      .replace(/\n/g, '')                 // Remove newlines
+      .trim();
     
-    // Remove any markdown code block syntax
-    response = response.replace(/```json\n?|\n?```/g, '');
-    
-    // Ensure the response starts with [ and ends with ]
-    const firstBracket = response.indexOf('[');
-    const lastBracket = response.lastIndexOf(']');
-    
-    if (firstBracket === -1 || lastBracket === -1) {
-      throw new Error("Response does not contain a valid JSON array");
+    // Ensure we have a JSON array
+    if (!response.startsWith('[') || !response.endsWith(']')) {
+      console.error('Invalid response format:', response);
+      throw new Error("Invalid response format: Expected an array of recommendations");
     }
-    
-    // Extract just the JSON array
-    response = response.slice(firstBracket, lastBracket + 1);
 
-    // Parse and validate the response
+    // Parse the response
     const doctorData = JSON.parse(response);
 
+    // Validate array and length
     if (!Array.isArray(doctorData) || doctorData.length !== 3) {
       throw new Error("Invalid number of recommendations");
     }
 
-    // Validate each doctor object has required fields
+    // Validate required fields
     const requiredFields = ['name', 'specialty', 'address', 'phone', 'opening_hours'];
     const isValid = doctorData.every(doctor => 
       requiredFields.every(field => doctor[field] && typeof doctor[field] === 'string')
