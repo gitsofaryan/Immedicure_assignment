@@ -16,45 +16,66 @@ export async function POST(request: Request) {
 
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
+    // Modified prompt to ensure JSON array response
     const prompt = `
-      As a healthcare recommendation system for India, provide 3 detailed doctor recommendations near ${userLocation} for these symptoms: ${symptoms}.
+      Act as a healthcare recommendation system for India. Based on the location: ${userLocation} 
+      and symptoms: ${symptoms}, generate exactly 3 doctor recommendations.
+
+      You must respond with ONLY a JSON array containing exactly 3 doctor recommendations.
+      Do not include any explanatory text or markdown formatting.
+      The response must start with '[' and end with ']'.
       
-      Return a JSON array of doctors with this structure:
+      Each doctor object must follow this exact format:
       {
-        "name": "Doctor's name and specialty",
-        "specialty": "Primary specialty",
-        "address": "Full address in India",
-        "phone": "Phone with country code",
-        "rating": "Number 1-5",
-        "opening_hours": "Business hours",
-        "website": "URL or null",
-        "map_url": "Google Maps URL",
-        "notes": "Additional information"
+        "name": "Full name with title (e.g., Dr. Rajesh Kumar)",
+        "specialty": "Medical specialty",
+        "address": "Complete address in ${userLocation}",
+        "phone": "Contact number with +91 prefix",
+        "rating": 4.5,
+        "opening_hours": "Mon-Sat: 9:00 AM - 6:00 PM",
+        "website": "http://example.com or null",
+        "map_url": "https://goo.gl/maps/example",
+        "notes": "Brief additional information"
       }
+
+      Ensure the response is a valid JSON array containing exactly 3 such objects.
     `;
 
     const result = await model.generateContent(prompt);
-    const response = result.response.text();
+    let response = result.response.text();
     
-    // Extract JSON from response
-    const jsonMatch = response.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) {
-      throw new Error("Invalid response format");
+    // Clean the response to ensure valid JSON
+    response = response.trim();
+    
+    // Remove any markdown code block syntax
+    response = response.replace(/```json\n?|\n?```/g, '');
+    
+    // Ensure the response starts with [ and ends with ]
+    const firstBracket = response.indexOf('[');
+    const lastBracket = response.lastIndexOf(']');
+    
+    if (firstBracket === -1 || lastBracket === -1) {
+      throw new Error("Response does not contain a valid JSON array");
+    }
+    
+    // Extract just the JSON array
+    response = response.slice(firstBracket, lastBracket + 1);
+
+    // Parse and validate the response
+    const doctorData = JSON.parse(response);
+
+    if (!Array.isArray(doctorData) || doctorData.length !== 3) {
+      throw new Error("Invalid number of recommendations");
     }
 
-    const doctorData = JSON.parse(jsonMatch[0]);
+    // Validate each doctor object has required fields
+    const requiredFields = ['name', 'specialty', 'address', 'phone', 'opening_hours'];
+    const isValid = doctorData.every(doctor => 
+      requiredFields.every(field => doctor[field] && typeof doctor[field] === 'string')
+    );
 
-    // Basic validation
-    const isValidData = Array.isArray(doctorData) && 
-      doctorData.every(doctor => 
-        doctor.name && 
-        doctor.specialty && 
-        doctor.address && 
-        doctor.phone
-      );
-
-    if (!isValidData) {
-      throw new Error("Invalid doctor data structure");
+    if (!isValid) {
+      throw new Error("Missing required fields in doctor recommendations");
     }
 
     return NextResponse.json({
@@ -65,11 +86,11 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    const message = error instanceof Error ? error.message : "An error occurred";
+    console.error('Recommendation error:', error);
     
     return NextResponse.json({
       status: "error",
-      message,
+      message: error instanceof Error ? error.message : "Failed to generate recommendations",
       data: null,
       disclaimer: "Please try again or contact support if the issue persists."
     }, { status: 500 });
