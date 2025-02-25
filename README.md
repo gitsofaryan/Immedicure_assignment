@@ -1,19 +1,11 @@
-# Project Title
-
-## Description
+# ImmmediCure - Doctor Recommendation System
+<br>
 Immedicure is a platform that helps you find the best doctors near you. 
 
-
 ## Features
-
 - Find the best doctors near you
 - Get instant doctor recommendations based on your symptoms and location
-- We'll help you find the best doctors near you
-
-
-
-
-
+- We'll help you find the best doctors to appoint.
 
 ### Installation
 
@@ -38,16 +30,14 @@ Instructions on how to run your application.
 npm run dev
 ```
 
-## Usage
-
-Provide examples of how to use your project.
+## UI and Usage:
 
 
 
-## Contributing
+![image](https://github.com/user-attachments/assets/e4cb6082-484f-4d37-8d68-cde757a69b71)
+<br>
+![image](https://github.com/user-attachments/assets/14aeecf9-4a1a-4738-a70a-8ba20a7631f6)
 
-Instructions for contributing to the project.
-
-## License
-
-Include your project's license information.
+## Results:
+- Ensure to recommend you best doctor near you.
+- Help you find Appoint the doctor on abroad.
