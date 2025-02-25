@@ -1,6 +1,6 @@
 # ImmmediCure - Doctor Recommendation System
 <br>
-Immedicure is a platform that helps you find the best doctors near you. 
+Immedicure is a platform is an doctor recommendation platform that help you find best doctor according your Symptoms and Location. It is promarily focused on finding doctors from from inida.  
 
 ## Features
 - Find the best doctors near you
